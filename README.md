@@ -70,4 +70,7 @@ The application is currently under development and is not yet runnable. Setup an
 
 ## Author
 
-Student project — BTech Computer Science and Engineering.
+Shina Katoch
+Pranjal Mehta
+Vishal
+
