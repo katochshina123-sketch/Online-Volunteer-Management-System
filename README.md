@@ -1,4 +1,8 @@
-# VolunteerHub
+# ONLINE VOLUNTEER MANAGEMENT SYSTEM
+## Team Members
+* **Shina** 
+* **Vishal** 
+* **Pranjal** 
 
 Volunteer management platform with three roles (Admin, Organization, Volunteer).
 
