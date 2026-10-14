@@ -1,76 +1,106 @@
-# Online Volunteer Management System
+# VolunteerHub
 
-## Project Overview
+Volunteer management platform with three roles (Admin, Organization, Volunteer).
 
-The Online Volunteer Management System is a Java-based web application designed to connect volunteers with organizations that need help with events and community activities.
+- Frontend: plain HTML, CSS and JavaScript (`src/main/webapp`)
+- Backend: Java servlets (Servlet 4.0) packaged as a WAR, plain JDBC
+- Database: MySQL 8
 
-The platform will allow volunteers to create accounts, view available opportunities, and register for events. Administrators will be able to manage volunteer opportunities and review registrations.
+## What you need installed
 
-## Problem Statement
+- JDK 11 or newer, including `java`, `javac`, and `jar` on PATH
+- MySQL 8 installed locally, with its client on PATH
 
-Managing volunteers through manual records, messages, and spreadsheets can make it difficult to organize events, maintain accurate registration records, and communicate opportunities efficiently. This project aims to provide a centralized online platform to simplify these tasks.
+## Setup
 
-## Objectives
+1. Install the `jm` command for your user:
+   - Windows: double-click `tools/installer/install.cmd`.
+   - macOS or Linux: run `sh tools/installer/install.sh`.
+   Open a new terminal after installation. The installer requires JDK 11 or newer and
+   does not install Java.
+2. From the project folder, run `jm init`. It checks for Maven and Tomcat 9; if either
+   is missing, it downloads the Apache archives into the ignored `.jm/tools` folder and
+   verifies their SHA-512 checksums. It creates `pom.xml` from the tracked template if
+   needed, then resolves Maven dependencies.
+3. Configure the local database with `jm migrate volunteer_db` (replace the name if
+   needed). It checks the local MySQL server, starts its Windows or Homebrew/systemd
+   service when stopped, creates the database, applies `database/schema.sql`, and
+   creates or updates the `volunteer_app` account. It saves connection settings to the
+   ignored `src/main/resources/db.properties`. Enter the MySQL administrator password when
+   prompted. Set `JM_DB_ADMIN_USER` if the admin account is not `root`. If `DB_URL` is
+   set, its database name must match the command argument. Existing app credentials
+   are reused. If both `DB_USER` and `DB_PASSWORD` are set, those credentials are used;
+   otherwise a password is generated only if `db.properties` does not already contain
+   one.
+4. Run `jm run volunteer.war` from the project folder. It builds the WAR with Maven,
+   checks MySQL and starts its service when stopped, copies the WAR to Tomcat 9, starts
+   Tomcat, waits for the application to be ready, and opens it in your default browser.
+   The terminal prints the detected HTTP port and URL. On Linux, starting system services
+   may prompt for your administrator password.
 
-* Provide a centralized platform for volunteer opportunities.
-* Allow volunteers to register and log in.
-* Display available events and their details.
-* Enable volunteers to register for events.
-* Allow administrators to create and manage events.
-* Store user, event, and registration information in a database.
+`jm migrate <database_name>` is the database setup command. `jm run <name.war>` builds,
+deploys, and starts the app. To remove the user-level command later, run
+`tools/installer/uninstall.cmd` on Windows or `sh tools/installer/uninstall.sh` on
+macOS/Linux. These uninstallers leave the repository and project `.jm` tools untouched.
 
-## Planned Features
+### Database credential safety
 
-1. User registration and login.
-2. Volunteer dashboard.
-3. Event listing and event details.
-4. Event registration and cancellation.
-5. Administrator event management.
-6. Registration management.
-7. Database-backed record storage.
+Keep MySQL passwords local. Do not add real credentials to source control, commit them
+in a `.properties` file, or share them in chat. `db.properties` is included in the
+built WAR, so use environment variables for deployments and treat locally built WAR
+files as confidential when they contain local credentials. If a password is exposed,
+rotate it in MySQL and update the app configuration.
 
-## Technology Stack
+## First sign-in
 
-* Programming language: Java
-* Web technologies: HTML and CSS
-* Server-side web integration: Java Servlets
-* Database: MySQL
-* Database connectivity: JDBC
-* Proposed server: Apache Tomcat
-* Version control: Git and GitHub
+On first start the app creates an administrator:
 
-## Planned Database Design
+- Email: `admin@volunteerhub.local`
+- Password: `Admin@123`
 
-* **Users:** Stores user IDs, names, email addresses, password hashes, and roles.
-* **Events:** Stores event IDs, titles, descriptions, locations, dates, and available volunteer slots.
-* **Registrations:** Connects volunteers with events and stores registration status.
+Change that password from Admin > User management > Edit.
+Organizations and volunteers can register themselves on the sign-in page.
 
-## Project Structure
+## How it fits the brief
 
-The project will be organized into model, DAO (database access), service, servlet, web interface, and database script components.
+| Role         | Feature                                               | Where                                |
+| ------------ | ----------------------------------------------------- | ------------------------------------ |
+| Admin        | User management (create/update/delete, roles, status) | Admin > User management              |
+| Admin        | Approve/reject listings                               | Admin > Volunteer listings, Overview |
+| Admin        | System settings                                       | Admin > System settings              |
+| Admin        | Participation statistics, pending approvals           | Admin > Participation overview       |
+| Organization | Post/edit/delete opportunities                        | Post opportunities                   |
+| Organization | Messages and feedback to volunteers                   | Volunteer interaction                |
+| Organization | Participation reports, mark attended/no-show          | Participation tracking               |
+| Volunteer    | Browse and sign up                                    | Available opportunities              |
+| Volunteer    | Sign-up status, cancel                                | My sign-ups                          |
+| Volunteer    | Log and view hours                                    | Hours tracking                       |
+| Volunteer    | Messages and feedback to organizations                | Organizations                        |
 
-## Current Status
+## REST API (all JSON)
 
-* GitHub repository created.
-* Project requirements and initial design documented.
-* Java application, database schema, JDBC connectivity, and user interface are pending implementation.
+- `POST /api/auth/login | register | logout`, `GET /api/auth/me | settings`
+- Admin: `GET|POST /api/admin/users`, `PUT|DELETE /api/admin/users/{id}`, `GET /api/admin/listings`,
+  `POST /api/admin/listings/{id}/status`, `GET|PUT /api/admin/settings`, `GET /api/admin/stats`
+- Organization: `GET|POST /api/org/listings`, `PUT|DELETE /api/org/listings/{id}`,
+  `GET /api/org/participation`, `POST /api/org/participation/{signupId}`
+- Volunteer: `GET /api/volunteer/opportunities`, `GET|POST /api/volunteer/signups`,
+  `DELETE /api/volunteer/signups/{id}`, `GET|POST /api/volunteer/hours`, `DELETE /api/volunteer/hours/{id}`
+- Messages: `GET|POST /api/messages`, `GET /api/messages/contacts`
 
-## Future Work
+## Notes
 
-1. Create the Java web application structure.
-2. Design and create the MySQL database.
-3. Implement JDBC database operations.
-4. Develop Servlets and web pages.
-5. Add validation, exception handling, and role-based access.
-6. Test the application and document the setup.
+- Passwords are hashed with BCrypt. Sessions are server-side (`HttpSession`). Every API call re-checks that the
+  account is still active, and each area (`/api/admin`, `/api/org`, `/api/volunteer`) is role-protected in `AuthFilter`.
+- Confirming attendance (Participation tracking) credits the listing's hours to the volunteer automatically.
+- Each query opens its own JDBC connection, which is fine locally. For heavier use, swap `Db.conn()` for a connection pool.
 
-## How to Run
+## Current platform behavior
 
-The application is currently under development and is not yet runnable. Setup and execution instructions will be added after the application and database have been implemented.
+- Admin settings include the site name and contact email, whether public registration is enabled, whether new or edited opportunities require approval, and the maximum number of upcoming sign-ups per volunteer. A limit of `0` means unlimited.
+- Organizations can review sign-ups and mark volunteers as signed up, attended, or no-show. Marking someone as attended adds verified hours to their record; changing that status removes the verified credit.
+- Volunteers can log their own hours separately from verified attendance hours. The hours view reports total, verified, and self-reported hours, and volunteers can remove their own entries.
+- Volunteers can message active organizations. Organizations can message volunteers who have signed up for one of their opportunities. Either side can send a message or feedback.
+- Public registration creates volunteer or organization accounts. Administrators can also create admin accounts and manage roles, account status, and passwords.
 
-## Author
-
-Shina Katoch
-Pranjal Mehta
-Vishal
-
+The database setup command supports `DB_URL` to select the local MySQL host, port, and database, `DB_USER` and `DB_PASSWORD` together to supply app credentials, and `JM_DB_ADMIN_USER` to select the MySQL administrator account (default: `root`). `jm migrate` only provisions databases on a local MySQL server. For application connections, `DB_URL`, `DB_USER`, and `DB_PASSWORD` environment variables override values in `src/main/resources/db.properties`.
